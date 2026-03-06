@@ -21,6 +21,24 @@ const NAV = [
   { id: "nuova", label: "Nuova", icon: "➕" },
 ]
 
+function HeaderAvatar({ player, onSignOut }) {
+  const avatarUrl = useSignedUrl(player?.avatar_url)
+  return (
+    <button onClick={onSignOut} style={{
+      width: 38, height: 38, borderRadius: "50%",
+      background: "#00e67620", border: "2px solid #00e67640",
+      overflow: "hidden", cursor: "pointer", padding: 0,
+    }}>
+      {avatarUrl
+        ? <img src={avatarUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        : <span style={{ color: "#00e676", fontWeight: 900, fontSize: 15 }}>
+            {player?.name?.[0]?.toUpperCase()}
+          </span>
+      }
+    </button>
+  )
+}
+
 export default function App() {
   const [page, setPage] = useState("home")
   const { user, player, loading, signOut, refreshPlayer } = useAuth()
@@ -36,8 +54,7 @@ export default function App() {
 
 
   const current = NAV.find(n => n.id === page)
-  const avatarUrl = useSignedUrl(player?.avatar_url)
-
+  
   const pages = {
     home: <Home onNavigate={setPage} />,
     classifica: <Classifica />,
@@ -61,18 +78,7 @@ export default function App() {
           <div style={{ color: "#00e676", fontSize: 11, letterSpacing: 3, fontWeight: 700 }}>IL CALCETTO</div>
           <div style={{ color: "#f0f0f0", fontSize: 17, fontWeight: 900 }}>{current?.icon} {current?.label}</div>
         </div>
-        <button onClick={signOut} style={{
-          width: 38, height: 38, borderRadius: "50%",
-          background: "#00e67620", border: "2px solid #00e67640",
-          overflow: "hidden", cursor: "pointer", padding: 0,
-          }}>
-          {avatarUrl
-            ? <img src={avatarUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            : <span style={{ color: "#00e676", fontWeight: 900, fontSize: 15 }}>
-                {player?.name?.[0]?.toUpperCase()}
-              </span>
-          }
-        </button>
+        <HeaderAvatar player={player} onSignOut={signOut} />
       </div>
 
       {/* Content */}
