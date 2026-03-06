@@ -6,11 +6,10 @@ export function useSignedUrl(path) {
 
   useEffect(() => {
     if (!path) return
-    // Se è già un URL completo (vecchie foto), usalo direttamente
     if (path.startsWith("http")) { setUrl(path); return }
 
     supabase.storage.from("Avatars")
-      .createSignedUrl(path, 3600) // valido 1 ora
+      .createSignedUrl(path, 3600)
       .then(({ data }) => { if (data) setUrl(data.signedUrl) })
   }, [path])
 
