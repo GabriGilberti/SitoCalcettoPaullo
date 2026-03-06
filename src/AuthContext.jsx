@@ -29,7 +29,7 @@ export function AuthProvider({ children }) {
       .from("players")
       .select("*")
       .eq("user_id", userId)
-      .single()
+      .maybeSingle()
     setPlayer(data || null)
     setLoading(false)
   }

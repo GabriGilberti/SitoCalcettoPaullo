@@ -66,7 +66,7 @@ export default function NuovaPartita() {
           team_a_name: nameA || "Squadra A",
           team_b_name: nameB || "Squadra B",
           score_a: scoreA, score_b: scoreB,
-        }).select().single()
+        }).select().maybeSingle()
       if (error) throw error
 
       await supabase.from("match_players").insert([

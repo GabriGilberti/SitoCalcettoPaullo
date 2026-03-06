@@ -73,28 +73,43 @@ export default function Setup({ onComplete }) {
 
     let avatar_url = null
 
-    if (preview) {
-      const blob = await getCroppedImg(imageSrc, croppedAreaPixels)
-      const path = `${user.id}/avatar.jpg`
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(path, blob, { upsert: true, contentType: "image/jpeg" })
+    if (preview && croppedAreaPixels) {
+        try {
+        const blob = await getCroppedImg(imageSrc, croppedAreaPixels)
+        console.log("Blob creato:", blob.size, blob.type)
 
-      if (!uploadError) {
-        const { data } = supabase.storage.from("avatars").getPublicUrl(path)
-        avatar_url = data.publicUrl
-      }
+        const path = `${user.id}/avatar.jpg`
+        const { data: uploadData, error: uploadError } = await supabase.storage
+            .from("Avatars")
+            .upload(path, blob, { upsert: true, contentType: "image/jpeg" })
+
+        console.log("Upload result:", uploadData, uploadError)
+
+        if (uploadError) {
+            console.error("Upload error:", uploadError)
+            alert("Errore upload: " + uploadError.message)
+        } else {
+            const { data: urlData } = supabase.storage
+            .from("Avatars").getPublicUrl(path)
+            avatar_url = urlData.publicUrl
+            console.log("Avatar URL:", avatar_url)
+        }
+        } catch (e) {
+        console.error("Errore crop/upload:", e)
+        }
     }
 
-    const { error } = await supabase.from("players").insert({
-      name: name.trim(),
-      user_id: user.id,
-      avatar_url,
+    const { data: insertData, error } = await supabase.from("players").insert({
+        name: name.trim(),
+        user_id: user.id,
+        avatar_url,
     })
+
+    console.log("Insert result:", insertData, error)
 
     if (error) { alert("Errore: " + error.message); setSaving(false); return }
     onComplete()
-  }
+    }
 
   // Schermata crop
   if (cropping) return (

@@ -46,8 +46,7 @@ export default function Home({ onNavigate }) {
       .select("*")
       .order("created_at", { ascending: false })
       .limit(1)
-      .single()
-
+      .maybeSingle()
     if (!lastMatch) { setLoading(false); return }
     setMatch(lastMatch)
 
@@ -90,7 +89,7 @@ export default function Home({ onNavigate }) {
 
       if (best) {
         const { data: mvpPlayer } = await supabase
-          .from("players").select("name").eq("id", best.id).single()
+          .from("players").select("name").eq("id", best.id).maybeSingle()
         if (mvpPlayer) setMvpName(mvpPlayer.name)
 
         const { data: mvpGoalData } = await supabase
@@ -98,7 +97,7 @@ export default function Home({ onNavigate }) {
           .select("count")
           .eq("match_id", lastMatch.id)
           .eq("player_id", best.id)
-          .single()
+          .maybeSingle()
         setMvpGoals(mvpGoalData?.count || 0)
       }
     }

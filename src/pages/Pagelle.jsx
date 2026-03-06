@@ -165,7 +165,7 @@ export default function Pagelle() {
     const { data: match } = await supabase
       .from("matches").select("*")
       .order("created_at", { ascending: false })
-      .limit(1).single()
+      .limit(1).maybeSingle()
 
     if (!match) { setLoading(false); return }
     setLastMatch(match)
