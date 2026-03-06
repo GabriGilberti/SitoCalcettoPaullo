@@ -89,10 +89,8 @@ export default function Setup({ onComplete }) {
             console.error("Upload error:", uploadError)
             alert("Errore upload: " + uploadError.message)
         } else {
-            const { data: urlData } = supabase.storage
-            .from("Avatars").getPublicUrl(path)
-            avatar_url = urlData.publicUrl
-            console.log("Avatar URL:", avatar_url)
+            avatar_url = path
+            console.log("Avatar path:", avatar_url)
         }
         } catch (e) {
         console.error("Errore crop/upload:", e)

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { supabase } from "../supabaseClient"
 import { useAuth } from "../AuthContext"
+import { useSignedUrl } from "../hooks/useSignedUrl"
 
 const C = {
   card: "#1a1a24", border: "#2a2a3a", accent: "#00e676",
@@ -135,19 +136,22 @@ export default function Profilo() {
     setLoading(false)
   }
 
-  const Avatar = ({ player, size = 72 }) => (
-    <div style={{
-      width: size, height: size, borderRadius: "50%", flexShrink: 0,
-      background: C.accent + "20", border: `3px solid ${C.accent}60`,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      overflow: "hidden",
-    }}>
-      {player?.avatar_url
-        ? <img src={player.avatar_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        : <span style={{ color: C.accent, fontWeight: 900, fontSize: size * 0.4 }}>{player?.name?.[0]}</span>
-      }
-    </div>
-  )
+  const Avatar = ({ player, size = 72 }) => {
+    const signedUrl = useSignedUrl(player?.avatar_url)
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: "50%", flexShrink: 0,
+        background: C.accent + "20", border: `3px solid ${C.accent}60`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        overflow: "hidden",
+      }}>
+        {signedUrl
+          ? <img src={signedUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          : <span style={{ color: C.accent, fontWeight: 900, fontSize: size * 0.4 }}>{player?.name?.[0]}</span>
+        }
+      </div>
+    )
+  }
 
   // Pannello altri giocatori
   if (showOthers) return (

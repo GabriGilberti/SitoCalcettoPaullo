@@ -9,6 +9,7 @@ import Pagelle from "./pages/Pagelle"
 import Profilo from "./pages/Profilo"
 import NuovaPartita from "./pages/NuovaPartita"
 import Setup from "./pages/Setup"
+import { useSignedUrl } from "../hooks/useSignedUrl"
 
 const NAV = [
   { id: "home", label: "Home", icon: "⚽" },
@@ -35,6 +36,7 @@ export default function App() {
 
 
   const current = NAV.find(n => n.id === page)
+  const avatarUrl = useSignedUrl(player?.avatar_url)
 
   const pages = {
     home: <Home onNavigate={setPage} />,
@@ -64,8 +66,8 @@ export default function App() {
           background: "#00e67620", border: "2px solid #00e67640",
           overflow: "hidden", cursor: "pointer", padding: 0,
           }}>
-          {player?.avatar_url
-            ? <img src={player.avatar_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          {avatarUrl
+            ? <img src={avatarUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             : <span style={{ color: "#00e676", fontWeight: 900, fontSize: 15 }}>
                 {player?.name?.[0]?.toUpperCase()}
               </span>
