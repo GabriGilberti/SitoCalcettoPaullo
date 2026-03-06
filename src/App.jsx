@@ -9,7 +9,7 @@ import Pagelle from "./pages/Pagelle"
 import Profilo from "./pages/Profilo"
 import NuovaPartita from "./pages/NuovaPartita"
 import Setup from "./pages/Setup"
-import { useSignedUrl } from "../hooks/useSignedUrl"
+import { useSignedUrl } from "./hooks/useSignedUrl"
 
 const NAV = [
   { id: "home", label: "Home", icon: "⚽" },
