@@ -8,6 +8,7 @@ import Storico from "./pages/Storico"
 import Pagelle from "./pages/Pagelle"
 import Profilo from "./pages/Profilo"
 import NuovaPartita from "./pages/NuovaPartita"
+import Setup from "./pages/Setup"
 
 const NAV = [
   { id: "home", label: "Home", icon: "⚽" },
@@ -21,7 +22,7 @@ const NAV = [
 
 export default function App() {
   const [page, setPage] = useState("home")
-  const { user, loading, signOut } = useAuth()
+  const { user, player, loading, signOut, refreshPlayer } = useAuth()
 
   if (loading) return (
     <div style={{ background: "#0a0a0f", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -30,6 +31,8 @@ export default function App() {
   )
 
   if (!user) return <Login />
+  if (!player) return <Setup onComplete={refreshPlayer} />
+
 
   const current = NAV.find(n => n.id === page)
 
@@ -59,13 +62,13 @@ export default function App() {
         <button onClick={signOut} style={{
           width: 38, height: 38, borderRadius: "50%",
           background: "#00e67620", border: "2px solid #00e67640",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: "#00e676", fontWeight: 900, fontSize: 13, cursor: "pointer",
-          title: "Logout",
-        }}>
-          {user.user_metadata?.avatar_url
-            ? <img src={user.user_metadata.avatar_url} style={{ width: 34, height: 34, borderRadius: "50%" }} />
-            : user.email?.[0].toUpperCase()
+          overflow: "hidden", cursor: "pointer", padding: 0,
+          }}>
+          {player?.avatar_url
+            ? <img src={player.avatar_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            : <span style={{ color: "#00e676", fontWeight: 900, fontSize: 15 }}>
+                {player?.name?.[0]?.toUpperCase()}
+              </span>
           }
         </button>
       </div>

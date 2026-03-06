@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { supabase } from "../supabaseClient"
+import { useAuth } from "../AuthContext"
 
 const C = {
   card: "#1a1a24", border: "#2a2a3a", accent: "#00e676",
@@ -16,12 +17,16 @@ const Card = ({ children, style = {}, glow = false }) => (
   }}>{children}</div>
 )
 
+const BASE_VOTES = [9.0, 8.0, 7.5, 7.0, 6.5, 6.0, 5.5, 5.0, 4.5, 4.0, 3.5, 3.0]
+
 export default function Profilo() {
+  const { player: currentPlayer } = useAuth()
   const [players, setPlayers] = useState([])
   const [selected, setSelected] = useState(null)
   const [stats, setStats] = useState(null)
   const [recentMatches, setRecentMatches] = useState([])
   const [loading, setLoading] = useState(false)
+  const [showOthers, setShowOthers] = useState(false)
 
   useEffect(() => {
     supabase.from("players").select("*").order("name").then(({ data }) => {
@@ -29,18 +34,23 @@ export default function Profilo() {
     })
   }, [])
 
+  // Carica automaticamente il proprio profilo
+  useEffect(() => {
+    if (currentPlayer && !selected) loadProfile(currentPlayer)
+  }, [currentPlayer])
+
   async function loadProfile(player) {
     setSelected(player)
+    setShowOthers(false)
     setLoading(true)
 
-    // Partite del giocatore
     const { data: mp } = await supabase
       .from("match_players")
       .select("match_id, team")
       .eq("player_id", player.id)
 
     if (!mp || mp.length === 0) {
-      setStats({ played: 0, w: 0, l: 0, pts: 0, goals: 0 })
+      setStats({ played: 0, w: 0, l: 0, pts: 0, goals: 0, votoMedio: null })
       setRecentMatches([])
       setLoading(false)
       return
@@ -48,17 +58,13 @@ export default function Profilo() {
 
     const matchIds = mp.map(x => x.match_id)
 
-    // Dati partite
     const { data: matches } = await supabase
-      .from("matches")
-      .select("*")
+      .from("matches").select("*")
       .in("id", matchIds)
       .order("created_at", { ascending: false })
 
-    // Gol del giocatore
     const { data: goals } = await supabase
-      .from("goals")
-      .select("match_id, count")
+      .from("goals").select("match_id, count")
       .eq("player_id", player.id)
 
     const goalMap = {}
@@ -75,38 +81,29 @@ export default function Profilo() {
       const theirScore = team === "A" ? match.score_b : match.score_a
       const result = myScore > theirScore ? "V" : myScore < theirScore ? "S" : "P"
       const gol = goalMap[match.id] || 0
-
       if (result === "V") w++
       if (result === "S") l++
       totalGoals += gol
-
       return {
         id: match.id,
         date: new Date(match.created_at).toLocaleDateString("it-IT", { day: "numeric", month: "short" }),
-        result,
-        goals: gol,
+        result, goals: gol,
         teamName: team === "A" ? match.team_a_name : match.team_b_name,
         vs: team === "A" ? match.team_b_name : match.team_a_name,
-        scoreFor: myScore,
-        scoreAgainst: theirScore,
+        scoreFor: myScore, scoreAgainst: theirScore,
       }
     }) || []
 
-    // Calcola pagella media storica
+    // Pagella media
     const { data: allRatings } = await supabase
-      .from("ratings")
-      .select("candidate_id, position, match_id")
-      .in("match_id", matchIds)  // ← tutti i giocatori, non solo player.id
-
-    const { data: allMp } = await supabase
-      .from("match_players")
-      .select("player_id, team, match_id")
+      .from("ratings").select("candidate_id, position, match_id")
       .in("match_id", matchIds)
 
-    const BASE_VOTES = [9.0, 8.0, 7.5, 7.0, 6.5, 6.0, 5.5, 5.0, 4.5, 4.0, 3.5, 3.0]
+    const { data: allMp } = await supabase
+      .from("match_players").select("player_id, team, match_id")
+      .in("match_id", matchIds)
 
     let votoTot = 0, votoN = 0
-
     const ratingsByMatch = {}
     allRatings?.forEach(r => {
       if (!ratingsByMatch[r.match_id]) ratingsByMatch[r.match_id] = []
@@ -115,89 +112,92 @@ export default function Profilo() {
 
     Object.entries(ratingsByMatch).forEach(([matchId, ratings]) => {
       const mpMatch = allMp?.filter(x => x.match_id === matchId) || []
-
       const posSum = {}, posCount = {}
       ratings.forEach(r => {
         posSum[r.candidate_id] = (posSum[r.candidate_id] || 0) + r.position
         posCount[r.candidate_id] = (posCount[r.candidate_id] || 0) + 1
       })
-
-      const playersInMatch = mpMatch.map(x => ({ id: x.player_id, team: x.team }))
-      const withAvg = playersInMatch
-        .filter(p => posSum[p.id])
-        .map(p => ({ id: p.id, avgPos: posSum[p.id] / posCount[p.id] }))
+      const withAvg = mpMatch
+        .filter(x => posSum[x.player_id])
+        .map(x => ({ id: x.player_id, avgPos: posSum[x.player_id] / posCount[x.player_id] }))
         .sort((a, b) => a.avgPos - b.avgPos)
-
       const idx = withAvg.findIndex(p => p.id === player.id)
-      if (idx !== -1) {
-        votoTot += BASE_VOTES[idx] ?? 3.0
-        votoN++
-      }
+      if (idx !== -1) { votoTot += BASE_VOTES[idx] ?? 3.0; votoN++ }
     })
 
     setStats({
       played: mp.length, w, l,
       pts: w * 3 + (mp.length - w - l),
       goals: totalGoals,
-      avg: mp.length > 0 ? (totalGoals / mp.length).toFixed(1) : "0.0",
       votoMedio: votoN > 0 ? Math.round((votoTot / votoN) * 10) / 10 : null,
     })
     setRecentMatches(recent)
     setLoading(false)
   }
 
-  // Selezione giocatore
-  if (!selected) return (
+  const Avatar = ({ player, size = 72 }) => (
+    <div style={{
+      width: size, height: size, borderRadius: "50%", flexShrink: 0,
+      background: C.accent + "20", border: `3px solid ${C.accent}60`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      overflow: "hidden",
+    }}>
+      {player?.avatar_url
+        ? <img src={player.avatar_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        : <span style={{ color: C.accent, fontWeight: 900, fontSize: size * 0.4 }}>{player?.name?.[0]}</span>
+      }
+    </div>
+  )
+
+  // Pannello altri giocatori
+  if (showOthers) return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ color: C.muted, fontSize: 11, letterSpacing: 2 }}>SELEZIONA GIOCATORE</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {players.map(p => (
-          <button key={p.id} onClick={() => loadProfile(p)} style={{
-            background: C.card, border: `1px solid ${C.border}`,
-            borderRadius: 12, padding: "14px 18px",
-            display: "flex", alignItems: "center", gap: 14,
-            cursor: "pointer", textAlign: "left",
-          }}>
-            <div style={{
-              width: 40, height: 40, borderRadius: "50%",
-              background: C.accent + "20", border: `2px solid ${C.accent}40`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: C.accent, fontWeight: 900, fontSize: 16, flexShrink: 0,
-            }}>{p.name[0]}</div>
-            <span style={{ color: C.text, fontWeight: 600, fontSize: 15 }}>{p.name}</span>
-            <span style={{ color: C.muted, marginLeft: "auto" }}>→</span>
-          </button>
-        ))}
-      </div>
+      <button onClick={() => setShowOthers(false)} style={{
+        background: "transparent", border: "none", color: C.muted,
+        fontSize: 13, cursor: "pointer", textAlign: "left", padding: 0,
+      }}>← Il mio profilo</button>
+
+      <div style={{ color: C.muted, fontSize: 11, letterSpacing: 2 }}>TUTTI I GIOCATORI</div>
+
+      {players.filter(p => p.id !== currentPlayer?.id).map(p => (
+        <button key={p.id} onClick={() => loadProfile(p)} style={{
+          background: C.card, border: `1px solid ${C.border}`,
+          borderRadius: 12, padding: "14px 18px",
+          display: "flex", alignItems: "center", gap: 14,
+          cursor: "pointer", textAlign: "left", width: "100%",
+        }}>
+          <Avatar player={p} size={44} />
+          <span style={{ color: C.text, fontWeight: 600, fontSize: 15 }}>{p.name}</span>
+          <span style={{ color: C.muted, marginLeft: "auto" }}>→</span>
+        </button>
+      ))}
     </div>
   )
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-      {/* Back */}
-      <button onClick={() => setSelected(null)} style={{
-        background: "transparent", border: "none", color: C.muted,
-        fontSize: 13, cursor: "pointer", textAlign: "left", padding: 0,
-      }}>← Tutti i giocatori</button>
+      {selected && selected.id !== currentPlayer?.id && (
+        <button onClick={() => loadProfile(currentPlayer)} style={{
+          background: "transparent", border: "none", color: C.muted,
+          fontSize: 13, cursor: "pointer", textAlign: "left", padding: 0,
+        }}>← Il mio profilo</button>
+      )}
 
       {loading ? (
         <div style={{ color: C.muted, textAlign: "center", padding: 60 }}>Caricamento...</div>
       ) : (
         <>
-          {/* Header profilo */}
           <Card glow style={{ textAlign: "center", padding: 28 }}>
-            <div style={{
-              width: 72, height: 72, borderRadius: "50%",
-              background: C.accent + "20", border: `3px solid ${C.accent}60`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: C.accent, fontWeight: 900, fontSize: 30,
-              margin: "0 auto 12px",
-            }}>{selected.name[0]}</div>
-            <div style={{ color: C.text, fontSize: 22, fontWeight: 900 }}>{selected.name}</div>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+              <Avatar player={selected} size={72} />
+            </div>
+            <div style={{ color: C.text, fontSize: 22, fontWeight: 900 }}>{selected?.name}</div>
+            {selected?.id === currentPlayer?.id && (
+              <div style={{ color: C.accent, fontSize: 12, marginTop: 4 }}>Il tuo profilo</div>
+            )}
           </Card>
 
-          {/* Stats griglia */}
           {stats && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               {[
@@ -215,16 +215,12 @@ export default function Profilo() {
             </div>
           )}
 
-          {/* Ultime partite */}
           {recentMatches.length > 0 && (
             <Card>
-              <div style={{ color: C.muted, fontSize: 11, letterSpacing: 2, marginBottom: 14 }}>
-                ULTIME PARTITE
-              </div>
+              <div style={{ color: C.muted, fontSize: 11, letterSpacing: 2, marginBottom: 14 }}>ULTIME PARTITE</div>
               {recentMatches.slice(0, 5).map((m, i) => (
                 <div key={m.id} style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "10px 0",
+                  display: "flex", alignItems: "center", gap: 10, padding: "10px 0",
                   borderBottom: i < Math.min(recentMatches.length, 5) - 1 ? `1px solid ${C.border}` : "none",
                 }}>
                   <span style={{ color: C.muted, fontSize: 12, width: 44, flexShrink: 0 }}>{m.date}</span>
@@ -236,7 +232,7 @@ export default function Profilo() {
                     color: m.result === "V" ? C.accent : m.result === "S" ? C.red : C.muted,
                   }}>{m.result}</span>
                   <span style={{ color: C.muted, fontSize: 12, flex: 1 }}>
-                    {m.teamName} <span style={{ color: C.muted, fontSize: 11 }}>vs</span> {m.vs}
+                    {m.teamName} <span style={{ fontSize: 11 }}>vs</span> {m.vs}
                   </span>
                   <span style={{ color: C.text, fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
                     {m.scoreFor}–{m.scoreAgainst}
@@ -249,13 +245,24 @@ export default function Profilo() {
             </Card>
           )}
 
-          {recentMatches.length === 0 && (
+          {recentMatches.length === 0 && stats?.played === 0 && (
             <Card style={{ textAlign: "center", padding: 32 }}>
-              <div style={{ color: C.muted, fontSize: 14 }}>Nessuna partita ancora per questo giocatore</div>
+              <div style={{ color: C.muted, fontSize: 14 }}>Nessuna partita ancora</div>
             </Card>
           )}
         </>
       )}
+
+      {/* Bottone vedere altri */}
+      <button onClick={() => setShowOthers(true)} style={{
+        background: C.card, border: `1px solid ${C.border}`,
+        borderRadius: 12, padding: "14px 18px",
+        color: C.muted, fontSize: 14, fontWeight: 600,
+        cursor: "pointer", marginTop: 4,
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+      }}>
+        👥 Vedi profili altri giocatori
+      </button>
     </div>
   )
 }
