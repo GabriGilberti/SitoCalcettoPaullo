@@ -20,7 +20,7 @@ export default function Login() {
           IL CALCETTO
         </div>
         <div style={{ color: C.text, fontSize: 26, fontWeight: 900, marginBottom: 8 }}>
-          Degli Amici
+          più rinomato della lombardia
         </div>
         <div style={{ color: C.muted, fontSize: 14, marginBottom: 48, lineHeight: 1.6 }}>
           Classifica · Marcatori · Pagelle
