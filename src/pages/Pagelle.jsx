@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { supabase } from "../supabaseClient"
 import { useAuth } from "../AuthContext"
+import { useState, useEffect, useRef } from "react"
 
 const C = {
   card: "#1a1a24", border: "#2a2a3a", accent: "#00e676",
@@ -61,40 +62,75 @@ function useCountdown(targetDate) {
 
 function DraggableList({ players, color, onReorder }) {
   const [items, setItems] = useState(players)
+  const dragIndex = useRef(null)
+  const dragOverIdx = useRef(null)
+  const touchStartY = useRef(null)
+  const touchItem = useRef(null)
 
   useEffect(() => { setItems(players) }, [players])
 
-  const [dragIndex, setDragIndex] = useState(null)
-  const [dragOverIdx, setDragOverIdx] = useState(null)
-
+  // Desktop drag
+  const handleDragStart = (i) => { dragIndex.current = i }
+  const handleDragEnter = (i) => { dragOverIdx.current = i }
   const handleDragEnd = () => {
-    if (dragIndex === null || dragOverIdx === null || dragIndex === dragOverIdx) {
-      setDragIndex(null); setDragOverIdx(null); return
-    }
+    if (dragIndex.current === null || dragOverIdx.current === null || dragIndex.current === dragOverIdx.current) return
     const updated = [...items]
-    const [moved] = updated.splice(dragIndex, 1)
-    updated.splice(dragOverIdx, 0, moved)
+    const [moved] = updated.splice(dragIndex.current, 1)
+    updated.splice(dragOverIdx.current, 0, moved)
     setItems(updated)
     onReorder(updated)
-    setDragIndex(null); setDragOverIdx(null)
+    dragIndex.current = null
+    dragOverIdx.current = null
+  }
+
+  // Touch drag
+  const handleTouchStart = (e, i) => {
+    touchItem.current = i
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  const handleTouchMove = (e) => {
+    e.preventDefault()
+    const y = e.touches[0].clientY
+    const elements = document.elementsFromPoint(e.touches[0].clientX, y)
+    const target = elements.find(el => el.dataset.idx !== undefined)
+    if (target) dragOverIdx.current = parseInt(target.dataset.idx)
+  }
+
+  const handleTouchEnd = () => {
+    if (touchItem.current === null || dragOverIdx.current === null || touchItem.current === dragOverIdx.current) {
+      touchItem.current = null; dragOverIdx.current = null; return
+    }
+    const updated = [...items]
+    const [moved] = updated.splice(touchItem.current, 1)
+    updated.splice(dragOverIdx.current, 0, moved)
+    setItems(updated)
+    onReorder(updated)
+    touchItem.current = null
+    dragOverIdx.current = null
   }
 
   return (
     <div>
       {items.map((player, i) => (
-        <div key={player.id}
+        <div
+          key={player.id}
+          data-idx={i}
           draggable
-          onDragStart={() => setDragIndex(i)}
-          onDragEnter={() => setDragOverIdx(i)}
+          onDragStart={() => handleDragStart(i)}
+          onDragEnter={() => handleDragEnter(i)}
           onDragEnd={handleDragEnd}
           onDragOver={e => e.preventDefault()}
+          onTouchStart={e => handleTouchStart(e, i)}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
           style={{
             display: "flex", alignItems: "center", gap: 12,
             padding: "12px 14px", marginBottom: 8,
-            background: dragOverIdx === i ? color + "15" : C.surface,
-            borderRadius: 10, border: `1px solid ${dragOverIdx === i ? color + "60" : C.border}`,
+            background: C.surface, borderRadius: 10,
+            border: `1px solid ${C.border}`,
             cursor: "grab", userSelect: "none",
-            transition: "all 0.15s",
+            touchAction: "none",  // ← disabilita scroll durante drag
           }}
         >
           <span style={{ color, fontWeight: 900, fontSize: 16, width: 24, textAlign: "center" }}>{i + 1}</span>
@@ -385,6 +421,11 @@ export default function Pagelle() {
         background: C.accent, color: C.card, border: "none",
         borderRadius: 10, padding: "14px", fontWeight: 900, fontSize: 15, cursor: "pointer",
       }}>AVANTI → {lastMatch.team_b_name}</button>
+      <button onClick={() => setPhase("intro")} style={{
+        background: "transparent", color: C.muted,
+        border: `1px solid ${C.border}`, borderRadius: 8,
+        padding: "10px", fontSize: 12, cursor: "pointer",
+      }}>✕ Annulla votazione</button>
     </div>
   )
 
@@ -416,6 +457,11 @@ export default function Pagelle() {
         border: `1px solid ${C.border}`, borderRadius: 8,
         padding: "8px", fontSize: 12, cursor: "pointer",
       }}>← Torna a {lastMatch.team_a_name}</button>
+      <button onClick={() => { setPhase("intro"); setRankingA(playersA); setRankingB(playersB) }} style={{
+        background: "transparent", color: C.red + "90",
+        border: `1px solid ${C.red}30`, borderRadius: 8,
+        padding: "10px", fontSize: 12, cursor: "pointer",
+      }}>✕ Annulla votazione</button>
     </div>
   )
 
