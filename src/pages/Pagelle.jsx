@@ -258,15 +258,6 @@ export default function Pagelle() {
       .limit(1)
       .maybeSingle()
 
-    // Controllo hasVoted al caricamento
-    const { data: myVote } = await supabase
-      .from("ratings")
-      .select("id")
-      .eq("match_id", match.id)
-      .eq("voter_id", player.id)  // ← player.id
-      .limit(1)
-      .maybeSingle()
-
     // Insert rows
     const rows = [
       ...rankingA.map((p, i) => ({
