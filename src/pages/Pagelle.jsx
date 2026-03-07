@@ -148,7 +148,7 @@ function DraggableList({ players, color, onReorder }) {
 }
 
 export default function Pagelle() {
-  const { user } = useAuth()
+  const { user, player } = useAuth()
   const [lastMatch, setLastMatch] = useState(null)
   const [playersA, setPlayersA] = useState([])
   const [playersB, setPlayersB] = useState([])
@@ -254,29 +254,32 @@ export default function Pagelle() {
       .from("ratings")
       .select("id")
       .eq("match_id", lastMatch.id)
-      .eq("voter_id", user.id)
+      .eq("voter_id", player.id)  // ← player.id
       .limit(1)
       .maybeSingle()
 
-    if (existing) {
-      alert("Hai già votato per questa partita!")
-      setHasVoted(true)
-      setPhase("intro")
-      setSaving(false)
-      return
-    }
+    // Controllo hasVoted al caricamento
+    const { data: myVote } = await supabase
+      .from("ratings")
+      .select("id")
+      .eq("match_id", match.id)
+      .eq("voter_id", player.id)  // ← player.id
+      .limit(1)
+      .maybeSingle()
+
+    // Insert rows
     const rows = [
       ...rankingA.map((p, i) => ({
         match_id: lastMatch.id,
         candidate_id: p.id,
-        voter_id: user.id,
+        voter_id: player.id,  // ← player.id
         position: i + 1,
         wins: 0,
       })),
       ...rankingB.map((p, i) => ({
         match_id: lastMatch.id,
         candidate_id: p.id,
-        voter_id: user.id,
+        voter_id: player.id,  // ← player.id
         position: i + 1,
         wins: 0,
       })),
