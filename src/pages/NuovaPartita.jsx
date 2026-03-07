@@ -67,8 +67,8 @@ export default function NuovaPartita() {
       const { data: match, error } = await supabase
         .from("matches")
         .insert({
-          team_a_name: teamAName,
-          team_b_name: teamBName,
+          team_a_name: nameA || "Squadra A",
+          team_b_name: nameB || "Squadra B",
           score_a: scoreA,
           score_b: scoreB,
           created_by: player?.id,
