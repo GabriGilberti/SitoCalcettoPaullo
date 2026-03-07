@@ -198,12 +198,12 @@ export default function Pagelle() {
     }
 
     // Controlla se l'utente ha già votato
-    if (user) {
+    if (player) {
       const { data: myVote } = await supabase
         .from("ratings")
         .select("id")
         .eq("match_id", match.id)
-        .eq("voter_id", user.id)
+        .eq("voter_id", player.id)
         .limit(1)
         .maybeSingle()
       setHasVoted(!!myVote)
