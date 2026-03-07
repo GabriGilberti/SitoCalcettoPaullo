@@ -249,6 +249,22 @@ export default function Pagelle() {
 
   async function handleSave() {
     setSaving(true)
+    // Controllo doppio voto
+    const { data: existing } = await supabase
+      .from("ratings")
+      .select("id")
+      .eq("match_id", lastMatch.id)
+      .eq("voter_id", user.id)
+      .limit(1)
+      .maybeSingle()
+
+    if (existing) {
+      alert("Hai già votato per questa partita!")
+      setHasVoted(true)
+      setPhase("intro")
+      setSaving(false)
+      return
+    }
     const rows = [
       ...rankingA.map((p, i) => ({
         match_id: lastMatch.id,

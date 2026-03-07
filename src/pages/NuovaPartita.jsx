@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { supabase } from "../supabaseClient"
+import { useAuth } from "../AuthContext"
 
 const C = {
   bg: "#0a0a0f", surface: "#13131a", card: "#1a1a24",
@@ -38,6 +39,8 @@ export default function NuovaPartita() {
     })
   }, [])
 
+  const { player } = useAuth()
+
   const togglePlayer = (player) => {
     if (teamA.find(p => p.id === player.id)) {
       setTeamA(teamA.filter(p => p.id !== player.id))
@@ -62,11 +65,15 @@ export default function NuovaPartita() {
     setSaving(true)
     try {
       const { data: match, error } = await supabase
-        .from("matches").insert({
-          team_a_name: nameA || "Squadra A",
-          team_b_name: nameB || "Squadra B",
-          score_a: scoreA, score_b: scoreB,
-        }).select().maybeSingle()
+        .from("matches")
+        .insert({
+          team_a_name: teamAName,
+          team_b_name: teamBName,
+          score_a: scoreA,
+          score_b: scoreB,
+          created_by: player?.id,
+        })
+        .select().maybeSingle()
       if (error) throw error
 
       await supabase.from("match_players").insert([
