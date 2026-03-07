@@ -24,7 +24,10 @@ const Badge = ({ children, color = C.accent }) => (
   }}>{children}</span>
 )
 
-const BASE_VOTES = [9.0, 8.0, 7.5, 7.0, 6.5, 6.0, 5.5, 5.0, 4.5, 4.0, 3.5, 3.0]
+function getVoto(position, total) {
+  if (total <= 1) return 6.0
+  return Math.round((9.0 - (position / (total - 1)) * 6.0) * 2) / 2
+}
 
 function buildRanking(players, ratingsData) {
   const posSum = {}, posCount = {}
@@ -36,7 +39,7 @@ function buildRanking(players, ratingsData) {
     .filter(p => posSum[p.id])
     .map(p => ({ ...p, avgPos: posSum[p.id] / posCount[p.id] }))
     .sort((a, b) => a.avgPos - b.avgPos)
-    .map((p, i) => ({ ...p, voto: BASE_VOTES[i] ?? 3.0 }))
+    .map((p, i, arr) => ({ ...p, voto: getVoto(i, arr.length) }))
 }
 
 function useCountdown(targetDate) {

@@ -7,8 +7,13 @@ const C = {
   surface: "#13131a", gold: "#ffd700",
 }
 
+function getVoto(position, total) {
+  if (total <= 1) return 6.0
+  return Math.round((9.0 - (position / (total - 1)) * 6.0) * 2) / 2
+}
+
 function buildRanking(players, ratingsData) {
-  const BASE_VOTES = [9.0, 8.0, 7.5, 7.0, 6.5, 6.0, 5.5, 5.0, 4.5, 4.0, 3.5, 3.0]
+  // getVoto usata sotto
 
   const posSum = {}, posCount = {}
   ratingsData.forEach(r => {
@@ -26,7 +31,7 @@ function buildRanking(players, ratingsData) {
 
   return rated.map((p, i) => ({
     ...p,
-    voto: BASE_VOTES[i] ?? 3.0,
+    voto: getVoto(i, rated.length),
     globalPosition: i + 1,
   }))
 }

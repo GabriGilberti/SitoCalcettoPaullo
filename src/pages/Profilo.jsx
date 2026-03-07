@@ -18,7 +18,12 @@ const Card = ({ children, style = {}, glow = false }) => (
   }}>{children}</div>
 )
 
-const BASE_VOTES = [9.0, 8.0, 7.5, 7.0, 6.5, 6.0, 5.5, 5.0, 4.5, 4.0, 3.5, 3.0]
+function getVoto(position, total) {
+  if (total <= 1) return 6.0
+  return Math.round((9.0 - (position / (total - 1)) * 6.0) * 2) / 2
+}
+
+const BASE_VOTES = null // rimosso, ora si usa getVoto
 
 export default function Profilo() {
   const { player: currentPlayer } = useAuth()
@@ -123,7 +128,7 @@ export default function Profilo() {
         .map(x => ({ id: x.player_id, avgPos: posSum[x.player_id] / posCount[x.player_id] }))
         .sort((a, b) => a.avgPos - b.avgPos)
       const idx = withAvg.findIndex(p => p.id === player.id)
-      if (idx !== -1) { votoTot += BASE_VOTES[idx] ?? 3.0; votoN++ }
+      if (idx !== -1) { votoTot += getVoto(idx, withAvg.length); votoN++ }
     })
 
     setStats({
