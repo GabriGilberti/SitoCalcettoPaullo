@@ -79,7 +79,7 @@ export default function Classifica() {
     matchPlayers.forEach(mp => {
       const name = mp.players.name
       const id = mp.player_id
-      if (!stats[id]) stats[id] = { name, played: 0, w: 0, l: 0, pts: 0 }
+      if (!stats[id]) stats[id] = { name, played: 0, w: 0, d: 0, l: 0, pts: 0 }
     })
 
     matches.forEach(match => {
@@ -92,7 +92,7 @@ export default function Classifica() {
         stats[id].played += 1
         if (myScore > theirScore) { stats[id].w += 1; stats[id].pts += 3 }
         else if (myScore < theirScore) { stats[id].l += 1 }
-        else { stats[id].pts += 1 }
+        else { stats[id].d += 1; stats[id].pts += 1 }
       })
     })
 
@@ -121,7 +121,7 @@ export default function Classifica() {
 
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
         <div style={{
-          display: "grid", gridTemplateColumns: "28px 1fr 32px 32px 32px 40px 44px",
+          display: "grid", gridTemplateColumns: "28px 1fr 32px 32px 32px 32px 40px 44px",
           background: C.surface, padding: "10px 14px",
           color: C.muted, fontSize: 10, letterSpacing: 1, fontWeight: 700,
         }}>
@@ -129,6 +129,7 @@ export default function Classifica() {
           <span>Giocatore</span>
           <span style={{ textAlign: "center" }}>PG</span>
           <span style={{ textAlign: "center" }}>V</span>
+          <span style={{ textAlign: "center" }}>P</span>
           <span style={{ textAlign: "center" }}>S</span>
           <span style={{ textAlign: "center" }}>Pt</span>
           <span style={{ textAlign: "center" }}>⭐</span>
@@ -139,7 +140,7 @@ export default function Classifica() {
           const votoColor = p.votoMedio >= 8 ? C.gold : p.votoMedio >= 6.5 ? C.accent : p.votoMedio >= 5 ? C.text : C.muted
           return (
             <div key={p.name} style={{
-              display: "grid", gridTemplateColumns: "28px 1fr 32px 32px 32px 40px 44px",
+              display: "grid", gridTemplateColumns: "28px 1fr 32px 32px 32px 32px 40px 44px",
               padding: "11px 14px", alignItems: "center",
               borderTop: `1px solid ${C.border}`,
               background: i === 0 ? C.accent + "08" : "transparent",
@@ -150,6 +151,7 @@ export default function Classifica() {
               <span style={{ color: C.text, fontWeight: 600, fontSize: 13 }}>{p.name}</span>
               <span style={{ color: C.muted, fontSize: 12, textAlign: "center" }}>{p.played}</span>
               <span style={{ color: C.accent, fontSize: 12, textAlign: "center", fontWeight: 700 }}>{p.w}</span>
+              <span style={{ color: C.muted, fontSize: 12, textAlign: "center" }}>{p.d}</span>
               <span style={{ color: C.red, fontSize: 12, textAlign: "center" }}>{p.l}</span>
               <div style={{ display: "flex", justifyContent: "center" }}>
                 <span style={{
