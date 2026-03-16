@@ -315,31 +315,19 @@ export default function Pagelle() {
       background: `linear-gradient(135deg, ${C.accent}10, ${C.accent}05)`,
       border: `1px solid ${C.accent}30`,
     }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-        <div style={{ color: C.muted, fontSize: 11, letterSpacing: 2 }}>PARTECIPAZIONE</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ color: C.muted, fontSize: 11, letterSpacing: 2 }}>VOTANTI: </div>
+          <span style={{ color: C.accent, fontWeight: 900, fontSize: 18 }}>
+            {voterCount === 0 ? "—" : voterCount}
+          </span>
+          <span style={{ color: C.muted, fontSize: 12 }}>
+            {voterCount === 0 ? "Nessuno ha ancora votato" : voterCount === 1 ? "persona ha votato" : "persone hanno votato"}
+          </span>
+        </div>
         {isExpired
           ? <Badge color={C.red}>Scaduto</Badge>
           : <Badge color={C.accent}>⏱ {countdown}</Badge>
-        }
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-        <div style={{ flex: 1, height: 8, background: C.border, borderRadius: 4, overflow: "hidden" }}>
-          <div style={{
-            height: "100%", borderRadius: 4,
-            width: `${totalPlayers > 0 ? (voterCount / totalPlayers) * 100 : 0}%`,
-            background: C.accent, transition: "width 0.5s",
-          }} />
-        </div>
-        <span style={{ color: C.accent, fontWeight: 900, fontSize: 15, flexShrink: 0 }}>
-          {voterCount}/{totalPlayers}
-        </span>
-      </div>
-      <div style={{ color: C.muted, fontSize: 12 }}>
-        {voterCount === 0
-          ? "Nessuno ha ancora votato"
-          : voterCount === totalPlayers
-          ? "✅ Tutti hanno votato!"
-          : `${totalPlayers - voterCount} ${totalPlayers - voterCount === 1 ? "giocatore deve" : "giocatori devono"} ancora votare`
         }
       </div>
     </Card>
