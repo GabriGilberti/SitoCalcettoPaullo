@@ -1,7 +1,22 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "../supabaseClient"
 import { useAuth } from "../AuthContext"
 import { useSignedUrl } from "../hooks/useSignedUrl"
+import Cropper from "react-easy-crop"
+
+async function getCroppedImg(imageSrc, croppedAreaPixels) {
+  const image = await new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = reject
+    img.src = imageSrc
+  })
+  const canvas = document.createElement("canvas")
+  canvas.width = 300; canvas.height = 300
+  const ctx = canvas.getContext("2d")
+  ctx.drawImage(image, croppedAreaPixels.x, croppedAreaPixels.y, croppedAreaPixels.width, croppedAreaPixels.height, 0, 0, 300, 300)
+  return new Promise(resolve => canvas.toBlob(blob => resolve(blob), "image/jpeg", 0.9))
+}
 
 const C = {
   card: "#1a1a24", border: "#2a2a3a", accent: "#00e676",
@@ -33,6 +48,37 @@ export default function Profilo() {
   const [recentMatches, setRecentMatches] = useState([])
   const [loading, setLoading] = useState(false)
   const [showOthers, setShowOthers] = useState(false)
+  const [cropping, setCropping] = useState(false)
+  const [imageSrc, setImageSrc] = useState(null)
+  const [crop, setCrop] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const { refreshPlayer } = useAuth()
+
+  const onCropComplete = useCallback((_, pixels) => { setCroppedAreaPixels(pixels) }, [])
+
+  const handlePhotoSelect = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => { setImageSrc(reader.result); setCropping(true) }
+    reader.readAsDataURL(file)
+  }
+
+  const handleSavePhoto = async () => {
+    setUploadingPhoto(true)
+    const blob = await getCroppedImg(imageSrc, croppedAreaPixels)
+    const path = `${currentPlayer.id}/avatar.jpg`
+    const { error } = await supabase.storage.from("Avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" })
+    if (error) { alert("Errore upload: " + error.message); setUploadingPhoto(false); return }
+    await supabase.from("players").update({ avatar_url: path }).eq("id", currentPlayer.id)
+    await refreshPlayer()
+    setCropping(false)
+    setImageSrc(null)
+    setUploadingPhoto(false)
+    loadProfile({ ...currentPlayer, avatar_url: path })
+  }
 
   useEffect(() => {
     supabase.from("players").select("*").order("name").then(({ data }) => {
@@ -158,6 +204,42 @@ export default function Profilo() {
     )
   }
 
+  // Schermata crop foto
+  if (cropping) return (
+    <div style={{ display: "flex", flexDirection: "column", height: "80vh" }}>
+      <div style={{ flex: 1, position: "relative" }}>
+        <Cropper
+          image={imageSrc}
+          crop={crop}
+          zoom={zoom}
+          aspect={1}
+          cropShape="round"
+          showGrid={false}
+          onCropChange={setCrop}
+          onZoomChange={setZoom}
+          onCropComplete={onCropComplete}
+        />
+      </div>
+      <div style={{ background: C.card, padding: "16px 24px", borderTop: `1px solid ${C.border}` }}>
+        <div style={{ color: C.muted, fontSize: 11, letterSpacing: 2, marginBottom: 10, textAlign: "center" }}>ZOOM</div>
+        <input type="range" min={1} max={3} step={0.05} value={zoom}
+          onChange={e => setZoom(parseFloat(e.target.value))}
+          style={{ width: "100%", accentColor: C.accent, marginBottom: 16 }} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <button onClick={() => { setCropping(false); setImageSrc(null) }} style={{
+            background: "transparent", color: C.muted, border: `1px solid ${C.border}`,
+            borderRadius: 10, padding: "12px", fontWeight: 700, fontSize: 14, cursor: "pointer",
+          }}>Annulla</button>
+          <button onClick={handleSavePhoto} disabled={uploadingPhoto} style={{
+            background: C.accent, color: C.card, border: "none",
+            borderRadius: 10, padding: "12px", fontWeight: 900, fontSize: 14, cursor: "pointer",
+            opacity: uploadingPhoto ? 0.6 : 1,
+          }}>{uploadingPhoto ? "Salvataggio..." : "Conferma ✓"}</button>
+        </div>
+      </div>
+    </div>
+  )
+
   // Pannello altri giocatori
   if (showOthers) return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -198,8 +280,21 @@ export default function Profilo() {
       ) : (
         <>
           <Card glow style={{ textAlign: "center", padding: 28 }}>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 12, position: "relative", width: "fit-content", margin: "0 auto 12px" }}>
               <Avatar player={selected} size={72} />
+              {selected?.id === currentPlayer?.id && (
+                <>
+                  <label htmlFor="avatar-change" style={{
+                    position: "absolute", bottom: 0, right: 0,
+                    width: 26, height: 26, borderRadius: "50%",
+                    background: C.accent, border: `2px solid ${C.card}`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", fontSize: 13,
+                  }}>📷</label>
+                  <input id="avatar-change" type="file" accept="image/*"
+                    onChange={handlePhotoSelect} style={{ display: "none" }} />
+                </>
+              )}
             </div>
             <div style={{ color: C.text, fontSize: 22, fontWeight: 900 }}>{selected?.name}</div>
             {selected?.id === currentPlayer?.id && (
